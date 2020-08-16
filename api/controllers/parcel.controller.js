@@ -1,10 +1,14 @@
 const Parcel = require("../models/parcel.model");
 const ProcessParcel = require("../models/process_parcel.model");
+const { ErrorHandler } = require('../../helpers/error');
 
 exports.create_parcel = function (req, res, next) {
-  const { name, culture, area } = req.body;
+  try {
+    const { name, culture, area } = req.body;
+    if (!name || !culture || !area) {
+      throw new ErrorHandler(404, 'Invalid Information Provided!');
+    }
 
-  if (name && culture && area) {
     let parcel = new Parcel({
       name,
       culture,
@@ -17,8 +21,8 @@ exports.create_parcel = function (req, res, next) {
         res.status(200).send({ error: false, parcel });
       }
     });
-  } else {
-    res.status(500).send({ error: true, message: "Invalid Information" });
+  } catch (error) {
+    next(error)
   }
 };
 

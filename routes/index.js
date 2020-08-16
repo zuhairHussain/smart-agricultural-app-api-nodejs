@@ -21,6 +21,5 @@ router.get("/process-parcels", VerifyToken, process_parcel_controller.all_proces
 
 router.post("/register", auth_controller.user_create);
 router.post("/login", auth_controller.user_login);
-router.get("/me", VerifyToken, auth_controller.me);
 
 module.exports = router;

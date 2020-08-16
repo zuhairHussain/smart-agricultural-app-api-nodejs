@@ -1,81 +1,75 @@
 var jwt = require("jsonwebtoken");
 var bcrypt = require("bcryptjs");
 var config = require("../../config");
-
 const User = require("../models/user.model");
+const { ErrorHandler } = require('../../helpers/error');
 
-exports.user_create = function (req, res, next) {
-  if (req.body.email && req.body.password) {
-    User.findOne({
-      email: req.body.email
+exports.user_create = async function (req, res, next) {
+  try {
+    const { email, password } = req.body;
+    if (!email) throw new ErrorHandler(404, 'Email field is required.');
+    if (!password) throw new ErrorHandler(404, 'Password field is required.');
+
+    await User.findOne({
+      email: email
     })
-      .then(doc => {
-        if (doc) {
-          res.status(200).json({ error: `The email adress ${doc.email} is already in use.` });
-        } else {
-          var hashedPassword = bcrypt.hashSync(req.body.password, 8);
-          var user = new User({
-            email: req.body.email,
-            password: hashedPassword
-          });
-
-          user.save(function (err, user) {
-            var token = jwt.sign({ id: user._id }, config.secret, {
-              expiresIn: 86400 // expires in 24 hours
-            });
-
-            if (err) {
-              res.status(500).send({ error: "Account not created please try again! " + err });
-            } else {
-              res.status(200).send({ token });
-            }
-          });
+      .then(userData => {
+        if (userData) {
+          throw new ErrorHandler(404, `The email address ${userData.email} is already in use.`);
         }
+
+        var hashedPassword = bcrypt.hashSync(password, 8);
+        var user = new User({
+          email: email,
+          password: hashedPassword
+        });
+
+        user.save(function (err, user) {
+          var token = jwt.sign({ id: user._id }, config.secret, {
+            expiresIn: 86400 // expires in 24 hours
+          });
+
+          if (err) {
+            next(err)
+          } else {
+            res.status(200).send({ token });
+          }
+        });
       });
-  } else {
-    res.status(500).send("Invalid Information");
+  } catch (error) {
+    next(error)
   }
 };
 
-exports.user_login = function (req, res, next) {
-  if (req.body.email && req.body.password) {
-    User.findOne({ email: req.body.email }, function (err, user) {
-      if (err) return res.status(500).send({ error: true, message: "Error on the server." });
-      if (!user) return res.status(401).send({ error: true, message: "Invalid email or password!" });
-      var passwordIsValid = bcrypt.compareSync(
-        req.body.password,
-        user.password
-      );
-      if (!passwordIsValid)
-        return res.status(401).send({ error: true, message: "Invalid email or password!" });
-      var token = jwt.sign({ id: user._id }, config.secret, {
-        expiresIn: 86400 // expires in 24 hours
-      });
-      res.status(200).send({ error: false, token: token, user: { email: user.email } });
+exports.user_login = async function (req, res, next) {
+  try {
+    const { email, password } = req.body;
+    if (!email) throw new ErrorHandler(404, 'Email field is required.');
+    if (!password) throw new ErrorHandler(404, 'Password field is required.');
+
+    const foundUser = await User.findOne({ email: email });
+    if (!foundUser) throw new ErrorHandler(404, 'No user found');
+
+    const passwordIsValid = await compareAsync(password, foundUser.password);
+    if (!passwordIsValid) throw new ErrorHandler(404, 'Invalid email or password provided!');
+    var token = jwt.sign({ id: foundUser._id }, config.secret, {
+      expiresIn: 86400 // expires in 24 hours
     });
-  } else {
-    res.status(401).send({ error: true, message: "Email and Password are required!" });
+    res.status(200).send({ error: false, token: token, user: { email: foundUser.email } });
+    next()
+  } catch (error) {
+    next(error)
   }
 };
 
-exports.me = function (req, res, next) {
-  var token = req.headers["x-access-token"];
-  if (!token)
-    return res.status(401).send({ error: true, message: "No token provided." });
-
-  jwt.verify(token, config.secret, function (err, decoded) {
-    if (err)
-      return res
-        .status(500)
-        .send({ error: true, message: "Failed to authenticate token." });
-
-    User.findById(decoded.id, { password: 0, _id: 0 }, function (err, user) {
-      if (err)
-        return res.status(500).send({ error: true, message: "There was a problem finding the user." });
-      if (!user) return res.status(404).send({ error: true, message: "No user found." });
-
-      res.status(200).send({ error: false, user });
-
+function compareAsync(pass, hash) {
+  return new Promise(function (resolve, reject) {
+    bcrypt.compare(pass, hash, function (err, res) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(res);
+      }
     });
   });
-};
+}

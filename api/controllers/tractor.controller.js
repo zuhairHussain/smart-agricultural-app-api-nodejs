@@ -1,8 +1,11 @@
 const Tractor = require("../models/tractor.model");
+const { ErrorHandler } = require('../../helpers/error');
 
 exports.create_tractor = function (req, res, next) {
-  const { name } = req.body;
-  if (name) {
+  try {
+    const { name } = req.body;
+    if (!name) throw new ErrorHandler(404, 'Name field is required!');
+
     let tractor = new Tractor({ name });
     tractor.save(function (err, tractor) {
       if (err) {
@@ -11,8 +14,8 @@ exports.create_tractor = function (req, res, next) {
         res.status(200).send({ error: false, tractor });
       }
     });
-  } else {
-    res.status(500).send({ error: true, message: "Invalid Information" });
+  } catch (error) {
+    next(error);
   }
 };
 
