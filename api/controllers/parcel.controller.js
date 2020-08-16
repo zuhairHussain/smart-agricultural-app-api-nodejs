@@ -36,7 +36,25 @@ exports.all_parcels = function (req, res, next) {
   });
 };
 
-exports.all_parcels_report = function (req, res, next) {
+exports.get_parcels_by_id = function (req, res, next) {
+	try {
+		const { id } = req.params;
+		if (!id) throw new ErrorHandler(404, 'ID is required!');
+
+		ProcessParcel.find({parcel: id}, function (err, parcel) {
+			if (err) {
+			  return next(err);
+			} else {
+			  res.status(200).send({ error: false, parcel });
+			}
+		})
+		.populate('tractor parcel');;
+  } catch (error) {
+    next(error)
+  }
+};
+
+exports.processed_parcels_area = function (req, res, next) {
   ProcessParcel.aggregate([
     {
       $group: {
@@ -51,15 +69,4 @@ exports.all_parcels_report = function (req, res, next) {
       res.status(200).send({ error: false, parcel });
     }
   });
-  // ProcessParcel.find({}, function (err, parcel) {
-  //   if (err) {
-  //     return next(err);
-  //   } else {
-  //     Appointments.aggregate([
-  //       { $group: { _id: '$date', patients: { $push: '$patient' } } },
-  //       { $project: { date: '$_id', patients: 1, _id: 0 } }
-  //     ], ...)
-  //     res.status(200).send({ error: false, parcel });
-  //   }
-  // });
 };

@@ -9,7 +9,8 @@ const auth_controller = require("../api/controllers/auth.controller");
 
 router.post("/parcel/create", VerifyToken, parcel_controller.create_parcel);
 router.get("/parcels", VerifyToken, parcel_controller.all_parcels);
-router.get("/process-parcels-all", VerifyToken, parcel_controller.all_parcels_report);
+router.get("/process-parcels-area", VerifyToken, parcel_controller.processed_parcels_area);
+router.get("/process-parcels-by-id/:id", VerifyToken, parcel_controller.get_parcels_by_id);
 
 router.post("/tractor/create", VerifyToken, tractor_controller.create_tractor);
 router.get("/tractors", VerifyToken, tractor_controller.all_tractors);

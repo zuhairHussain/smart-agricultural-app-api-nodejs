@@ -2,6 +2,7 @@ const ProcessParcel = require("../models/process_parcel.model");
 const Parcel = require("../models/parcel.model");
 const Tractor = require("../models/tractor.model");
 const { ErrorHandler } = require('../../helpers/error');
+const { getFirstValueFromArray } = require('../../helpers/common');
 
 exports.create_process_parcel = async function (req, res, next) {
 
@@ -17,7 +18,7 @@ exports.create_process_parcel = async function (req, res, next) {
       throw new ErrorHandler(404, 'Invalid Information Provided!');
     }
 
-    if (area > findParcel[0].area) {
+    if (area > getFirstValueFromArray(findParcel).area) {
       throw new ErrorHandler(404, 'Area should not exceed the area of the selected parcel');
     }
 
